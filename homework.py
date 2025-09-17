@@ -33,7 +33,7 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    """Проверка доступности токенов"""
+    """Проверка доступности токенов."""
     tokens = {
         'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
@@ -53,7 +53,7 @@ def check_tokens():
 
 
 def send_message(bot, message):
-    """Отправка сообщений в Telegram"""
+    """Отправка сообщений в Telegram."""
     logger.debug('Отправка сообщения')
     bot.send_message(
         chat_id=TELEGRAM_CHAT_ID,
@@ -63,7 +63,7 @@ def send_message(bot, message):
 
 
 def get_api_answer(timestamp):
-    """Получение ответа API"""
+    """Получение ответа API."""
     logger.debug(f'Отправка запроса {ENDPOINT}, время {timestamp}')
     try:
         response = requests.get(
@@ -85,7 +85,7 @@ def get_api_answer(timestamp):
 
 
 def check_response(response):
-    """Проверка ответа API на соответствие документации"""
+    """Проверка ответа API на соответствие документации."""
     logger.debug('Начало проверки ответа API.')
     if not isinstance(response, dict):
         raise TypeError(
@@ -102,7 +102,7 @@ def check_response(response):
 
 
 def parse_status(homework):
-    """Извлечение статуса домашней работы"""
+    """Извлечение статуса домашней работы."""
     logger.debug('Начало извлечения статуса домашней работы.')
     if not isinstance(homework, dict):
         raise TypeError(f'Не верный формат homework: {type(homework)}')
@@ -113,7 +113,9 @@ def parse_status(homework):
     homework_status = homework['status']
     homework_name = homework['homework_name']
     if homework_status not in HOMEWORK_VERDICTS:
-        raise ValueError(f'Неизвестный статус домашней работы: {homework_status}')
+        raise ValueError(
+            f'Неизвестный статус домашней работы: {homework_status}'
+        )
     verdict = HOMEWORK_VERDICTS[homework_status]
     message = f'Статус проверки {homework_name} изменился: {verdict}'
     logger.debug('Статус домашней работы успешно извлечен')
@@ -126,6 +128,7 @@ def main():
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
     latest_homework_status = ''
+    last_error_message = ''
     while True:
         try:
             response = get_api_answer(timestamp)
@@ -148,8 +151,12 @@ def main():
                     send_message(bot, message)
                     last_error_message = message
                 except Exception as send_error:
-                    logger.error(f'Не удалось отправить сообщение об ошибке: {send_error}')
-        logger.debug(f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой')
+                    logger.error(
+                        f'Не удалось отправить сообщение об ошибке: {send_error}'
+                    )
+        logger.debug(
+            f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой'
+        )
         time.sleep(RETRY_PERIOD)
 
 
