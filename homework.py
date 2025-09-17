@@ -12,7 +12,6 @@ load_dotenv()
 PRACTICUM_TOKEN = os.getenv('practicum_token')
 TELEGRAM_TOKEN = os.getenv('telegram_token')
 TELEGRAM_CHAT_ID = os.getenv('chat_id')
-bot = TeleBot(token=TELEGRAM_TOKEN)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -144,6 +143,12 @@ def main():
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
+            if message != last_error_message:
+                try:
+                    send_message(bot, message)
+                    last_error_message = message
+                except Exception as send_error:
+                    logger.error(f'Не удалось отправить сообщение об ошибке: {send_error}')
         logger.debug(f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой')
         time.sleep(RETRY_PERIOD)
 
