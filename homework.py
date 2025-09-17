@@ -152,7 +152,7 @@ def main():
                     last_error_message = message
                 except Exception as send_error:
                     logger.error(
-                        f'Не удалось отправить сообщение об ошибке: {send_error}'
+                        f'Не удалось отправить сообщение: {send_error}'
                     )
         logger.debug(
             f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой'
