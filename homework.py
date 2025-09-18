@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from http import HTTPStatus
 
 import requests
 from dotenv import load_dotenv
@@ -75,11 +76,10 @@ def get_api_answer(timestamp):
     except requests.RequestException as error:
         logger.error(f'Ошибка при запросе к APIL {error}')
         raise ConnectionError(f'Ошибка соединения с API: {error}')
-    try:
-        response_data = response.json
-    except ValueError as error:
-        logger.error(f'Ошибка парсинга ответа JSON: {error}')
-        raise ValueError(f'Невалидный ответ JSON: {error}')
+    response_data = response.json()
+    response_status = response.status_code
+    if response_status != HTTPStatus.OK:
+        raise ValueError(f'Невалидный ответ JSON: {response_status}')
     logger.debug('Ответ от API получен')
     return response_data
 
@@ -161,3 +161,9 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+FAILED tests/test_bot.py::TestHomework::test_get_not_200_status_response[mocked_response2] - AssertionError: Убедитесь, что в функции `get_api_answer` обрабатывается ситуация, когда API домашки возвращает код, отличный от 200.
+FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что в функцию `check_response` передан ответ API домашки.
+FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
+assert []
