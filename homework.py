@@ -80,23 +80,23 @@ def get_api_answer(timestamp):
     except ValueError as error:
         logger.error(f'Ошибка парсинга ответа JSON: {error}')
         raise ValueError(f'Невалидный ответ JSON: {error}')
-    logger.debuf('Ответ от API получен')
+    logger.debug('Ответ от API получен')
     return response_data
 
 
 def check_response(response):
-    """Проверка ответа API на соответствие документации."""
+    """Проверка ответа API."""
     logger.debug('Начало проверки ответа API.')
     if not isinstance(response, dict):
         raise TypeError(
-            f'Не верный тип данных: {type(response)}'
+            f'Неверный тип данных: {type(response)}'
         )
     if 'homeworks' not in response:
         raise KeyError('Отсутствует ключ "homeworks" в ответе API.')
     homeworks = response['homeworks']
     if not isinstance(homeworks, list):
         raise TypeError(
-            f'Не верный формат данных с ключом "homeworks": {type(homeworks)}.'
+            f'Неверный формат данных с ключом "homeworks": {type(homeworks)}.'
         )
     logger.debug('Завершение проверки ответа API.')
 
@@ -161,3 +161,11 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+FAILED tests/test_bot.py::TestHomework::test_get_api_answers - AttributeError: 'Logger' object has no attribute 'debuf'. Did you mean: 'debug'?
+FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что для проверки ответа API домашки бот использует функцию `check_response`.
+assert []
+FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
+assert []
+========================= 3 failed, 22 passed in 0.30
