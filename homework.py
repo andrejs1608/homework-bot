@@ -1,8 +1,9 @@
 import logging
 import os
+import requests
 import time
 
-import requests
+from http import HTTPStatus
 from dotenv import load_dotenv
 from telebot import TeleBot
 
@@ -43,10 +44,10 @@ def check_tokens():
     for token_name, token_value in tokens.items():
         if not token_value:
             missing_tokens.append(token_name)
-            logger.error(f'Отсутствует обязательный токен: {token_name}')
+            logger.critical(f'Отсутствует обязательный токен: {token_name}')
 
     if missing_tokens:
-        logger.error(
+        logger.critical(
             f'Отсутствуют обязательные токены: {", ".join(missing_tokens)}'
         )
         raise ValueError('Доступны не все обязательные токены')
@@ -71,15 +72,12 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params={'from_date': timestamp}
         )
-        response.raise_for_status()
+        response_status = response.status_code
     except requests.RequestException as error:
-        logger.error(f'Ошибка при запросе к основному API: {error}')
-        raise
-    try:
-        response_data = response.json()
-    except ValueError as error:
-        logger.error(f'Ошибка парсинга JSON ответа: {error}')
-        raise
+        raise ConnectionError(f'Ошибка при запросе к API: {error}')
+    response_data = response.json()
+    if response_status != HTTPStatus.OK:
+        raise ValueError(f'Ошибка парсинга JSON ответа: {error}')
     logger.debug('Ответ от API получен')
     return response_data
 
@@ -117,9 +115,8 @@ def parse_status(homework):
             f'Неизвестный статус домашней работы: {homework_status}'
         )
     verdict = HOMEWORK_VERDICTS[homework_status]
-    message = f'Статус проверки {homework_name} изменился: {verdict}'
     logger.debug('Статус домашней работы успешно извлечен')
-    return message
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
@@ -162,3 +159,9 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+#  +  where False = <built-in method startswith of str object at 0x7f106308b0f0>('Изменился статус проверки работы "Homework test"')
+#  +    where <built-in method startswith of str object at 0x7f106308b0f0> = 'Статус проверки Homework test изменился: Работа проверена: ревьюеру всё понравилось. Ура!'.startswith
+# FAILED tests/test_bot.py::TestHomework::test_main_without_env_vars_raise_exception - AssertionError: Убедитесь, что при отсутствии обязательных переменных окружения событие логируется с уровнем `CRITICAL`.
+# ========================= 4 failed, 21 passed in 0.26s ======
