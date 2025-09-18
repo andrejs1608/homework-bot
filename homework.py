@@ -161,11 +161,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-FAILED tests/test_bot.py::TestHomework::test_get_api_answers - AttributeError: 'Logger' object has no attribute 'debuf'. Did you mean: 'debug'?
-FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что для проверки ответа API домашки бот использует функцию `check_response`.
-assert []
-FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
-assert []
-========================= 3 failed, 22 passed in 0.30
