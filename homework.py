@@ -1,9 +1,8 @@
 import logging
 import os
-import requests
 import time
 
-from http import HTTPStatus
+import requests
 from dotenv import load_dotenv
 from telebot import TeleBot
 
@@ -72,13 +71,16 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params={'from_date': timestamp}
         )
-        response_status = response.status_code
+        response.raise_for_status()
     except requests.RequestException as error:
-        raise ConnectionError(f'Ошибка при запросе к API: {error}')
-    response_data = response.json()
-    if response_status != HTTPStatus.OK:
-        raise ValueError(f'Ошибка парсинга JSON ответа: {error}')
-    logger.debug('Ответ от API получен')
+        logger.error(f'Ошибка при запросе к APIL {error}')
+        raise ConnectionError(f'Ошибка соединения с API: {error}')
+    try:
+        response_data = response.json
+    except ValueError as error:
+        logger.error(f'Ошибка парсинга ответа JSON: {error}')
+        raise ValueError(f'Невалидный ответ JSON: {error}')
+    logger.debuf('Ответ от API получен')
     return response_data
 
 
