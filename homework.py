@@ -161,9 +161,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-FAILED tests/test_bot.py::TestHomework::test_get_not_200_status_response[mocked_response2] - AssertionError: Убедитесь, что в функции `get_api_answer` обрабатывается ситуация, когда API домашки возвращает код, отличный от 200.
-FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что в функцию `check_response` передан ответ API домашки.
-FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
-assert []
