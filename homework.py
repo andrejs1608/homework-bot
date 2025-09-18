@@ -159,9 +159,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-#  +  where False = <built-in method startswith of str object at 0x7f106308b0f0>('Изменился статус проверки работы "Homework test"')
-#  +    where <built-in method startswith of str object at 0x7f106308b0f0> = 'Статус проверки Homework test изменился: Работа проверена: ревьюеру всё понравилось. Ура!'.startswith
-# FAILED tests/test_bot.py::TestHomework::test_main_without_env_vars_raise_exception - AssertionError: Убедитесь, что при отсутствии обязательных переменных окружения событие логируется с уровнем `CRITICAL`.
-# ========================= 4 failed, 21 passed in 0.26s ======
