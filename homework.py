@@ -1,11 +1,15 @@
 import logging
 import os
+import sys
 import time
 from http import HTTPStatus
 
 import requests
 from dotenv import load_dotenv
 from telebot import TeleBot
+from telebot.apihelper import ApiException
+
+from exceptions import MissingTokenException, InvalidResponseException
 
 
 load_dotenv()
@@ -14,10 +18,6 @@ PRACTICUM_TOKEN = os.getenv('practicum_token')
 TELEGRAM_TOKEN = os.getenv('telegram_token')
 TELEGRAM_CHAT_ID = os.getenv('chat_id')
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
 logger = logging.getLogger(__name__)
 
 
@@ -40,27 +40,30 @@ def check_tokens():
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
-    missing_tokens = []
-    for token_name, token_value in tokens.items():
-        if not token_value:
-            missing_tokens.append(token_name)
-            logger.critical(f'Отсутствует обязательный токен: {token_name}')
-
+    missing_tokens = [
+        token_name for token_name, token_value in tokens.items()
+        if not token_value
+    ]
     if missing_tokens:
         logger.critical(
-            f'Отсутствуют обязательные токены: {", ".join(missing_tokens)}'
+            f'Отсутствуют обязательный токен: {", ".join(missing_tokens)}'
         )
-        raise ValueError('Доступны не все обязательные токены')
+        raise MissingTokenException('Доступны не все обязательные токены')
 
 
 def send_message(bot, message):
     """Отправка сообщений в Telegram."""
     logger.debug('Отправка сообщения')
-    bot.send_message(
-        chat_id=TELEGRAM_CHAT_ID,
-        text=message
-    )
-    logger.debug('Сообщение отправлено')
+    try:
+        bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=message
+        )
+        logger.debug('Сообщение отправлено')
+        return True
+    except (ApiException, requests.RequestException) as error:
+        logger.error(f'Ошибка при отправке сообщения в Telegram: {error}')
+        return False
 
 
 def get_api_answer(timestamp):
@@ -72,14 +75,13 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params={'from_date': timestamp}
         )
-        response.raise_for_status()
+        response_status = response.status_code
     except requests.RequestException as error:
-        logger.error(f'Ошибка при запросе к APIL {error}')
         raise ConnectionError(f'Ошибка соединения с API: {error}')
     response_data = response.json()
-    response_status = response.status_code
+        # Тесты требуют возвращать словарь
     if response_status != HTTPStatus.OK:
-        raise ValueError(f'Невалидный ответ JSON: {response_status}')
+        raise InvalidResponseException(f'Невалидный ответ: {response_status}')
     logger.debug('Ответ от API получен')
     return response_data
 
@@ -99,6 +101,7 @@ def check_response(response):
             f'Неверный формат данных с ключом "homeworks": {type(homeworks)}.'
         )
     logger.debug('Завершение проверки ответа API.')
+    return homeworks
 
 
 def parse_status(homework):
@@ -126,38 +129,53 @@ def main():
     check_tokens()
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
-    latest_homework_status = ''
     last_error_message = ''
     while True:
         try:
             response = get_api_answer(timestamp)
-            check_response(response)
-            homeworks = response.get('homeworks', [])
-            latest_homework = homeworks[0]
-            current_status = parse_status(latest_homework)
-            if current_status != latest_homework_status:
-                send_message(bot, current_status)
-                latest_homework_status = current_status
-                logger.info('Сообщение о новом статусе отправлено.')
+            homeworks = check_response(response)
+
+            if homeworks:
+                latest_homework = homeworks[0]
+                current_status = parse_status(latest_homework)
+
+                if send_message(bot, current_status):
+                    timestamp = response.get('current_date', int(time.time()))
+                    logger.info('Сообщение успешно отправлено')
+                else:
+                    logger.error('Не удалось отправить сообщение')
             else:
-                logger.info('Статус домашней работы не изменился')
-            timestamp = response.get('current_date', int(time.time()))
+                logger.debug('Нет новых домашних работ для проверки')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.error(message)
             if message != last_error_message:
-                try:
-                    send_message(bot, message)
-                    last_error_message = message
-                except Exception as send_error:
-                    logger.error(
-                        f'Не удалось отправить сообщение: {send_error}'
-                    )
-        logger.debug(
-            f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой'
-        )
-        time.sleep(RETRY_PERIOD)
+                logger.error(f'Обнаружена новая ошибка: {message}')
+                last_error_message = message
+        finally:
+            logger.debug(
+                f'Ожидание {RETRY_PERIOD} секунд перед следующей проверкой'
+            )
+            time.sleep(RETRY_PERIOD)
 
 
 if __name__ == '__main__':
+    stream_handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    stream_handler.setFormatter(formatter)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.addHandler(stream_handler)
+
     main()
+
+
+# FAILED tests/test_bot.py::TestHomework::test_get_api_answers - AssertionError: Проверьте, что функция `get_api_answer` возвращает словарь.
+# assert False
+#  +  where False = isinstance(<HTTPStatus.OK: 200>, dict)
+# FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что для проверки ответа API домашки бот использует функцию `check_response`.
+# assert []
+# FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
+# assert []
