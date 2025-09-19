@@ -23,7 +23,7 @@ class MissingTokenError(Exception):
     """Кастомная ошибка токенов."""
 
 
-class InvalidResponse(Exception):
+class InvalidResponseError(Exception):
     """Невалидный ответ."""
 
 
@@ -47,7 +47,7 @@ def check_tokens():
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
     }
     missing_tokens = [
-        token_name for token_name, token_value in tokens.items
+        token_name for token_name, token_value in tokens.items()
         if not token_value
     ]
     if missing_tokens:
@@ -87,7 +87,7 @@ def get_api_answer(timestamp):
     if response_status == HTTPStatus.OK:
         logger.debug('Ответ от API получен')
         return response_status
-    raise InvalidResponse(f'Невалидный ответ: {response_status}')
+    raise InvalidResponseError(f'Невалидный ответ: {response_status}')
 
 
 def check_response(response):
@@ -145,9 +145,9 @@ def main():
 
                 if send_message(bot, current_status):
                     timestamp = response.get('current_date', int(time.time()))
-                    logger.info('Сообщение о статусе успешно отправлено')
+                    logger.info('Сообщение успешно отправлено')
                 else:
-                    logger.error('Не удалось отправить сообщение о статусе')
+                    logger.error('Не удалось отправить сообщение')
             else:
                 logger.debug('Нет новых домашних работ для проверки')
         except Exception as error:
