@@ -9,6 +9,8 @@ from dotenv import load_dotenv
 from telebot import TeleBot
 from telebot.apihelper import ApiException
 
+from exceptions import MissingTokenError, InvalidResponseError
+
 
 load_dotenv()
 
@@ -17,14 +19,6 @@ TELEGRAM_TOKEN = os.getenv('telegram_token')
 TELEGRAM_CHAT_ID = os.getenv('chat_id')
 
 logger = logging.getLogger(__name__)
-
-
-class MissingTokenError(Exception):
-    """Кастомная ошибка токенов."""
-
-
-class InvalidResponseError(Exception):
-    """Невалидный ответ."""
 
 
 RETRY_PERIOD = 600
@@ -86,7 +80,9 @@ def get_api_answer(timestamp):
     response_status = response.status_code
     if response_status == HTTPStatus.OK:
         logger.debug('Ответ от API получен')
-        return response_status
+        response_data = response.json()
+        # Тесты требуют возвращать словарь, я без понятия, зачем он тут
+        return response_data
     raise InvalidResponseError(f'Невалидный ответ: {response_status}')
 
 
@@ -174,3 +170,12 @@ if __name__ == '__main__':
     root_logger.addHandler(stream_handler)
 
     main()
+
+
+# FAILED tests/test_bot.py::TestHomework::test_get_api_answers - AssertionError: Проверьте, что функция `get_api_answer` возвращает словарь.
+# assert False
+#  +  where False = isinstance(<HTTPStatus.OK: 200>, dict)
+# FAILED tests/test_bot.py::TestHomework::test_main_check_response_is_called - AssertionError: Убедитесь, что для проверки ответа API домашки бот использует функцию `check_response`.
+# assert []
+# FAILED tests/test_bot.py::TestHomework::test_main_send_message_with_new_status - AssertionError: Убедитесь, что при изменении статуса домашней работы бот отправляет в Telegram сообщение с вердиктом из переменной `HOMEWORK_VERDICTS`.
+# assert []
