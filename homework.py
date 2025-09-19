@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from telebot import TeleBot
 from telebot.apihelper import ApiException
 
-from exceptions import MissingTokenException, InvalidResponseException
+from exceptions import InvalidResponseException, MissingTokenException
 
 
 load_dotenv()
@@ -75,14 +75,17 @@ def get_api_answer(timestamp):
             headers=HEADERS,
             params={'from_date': timestamp}
         )
-
     except requests.RequestException as error:
         raise ConnectionError(f'Ошибка соединения с API: {error}')
     response_status = response.status_code
     if response_status == HTTPStatus.OK:
         logger.debug('Ответ от API получен')
-        response_data = response.json()
-        # Тесты требуют возвращать словарь, я без понятия, зачем он тут
+        try:
+            response_data = response.json()
+        except ValueError as error:
+            raise InvalidResponseException(
+                f'Ошибка при преобразовании ответа в JSON: {error}'
+            )
         return response_data
     raise InvalidResponseException(f'Невалидный ответ: {response_status}')
 
@@ -141,10 +144,11 @@ def main():
                 current_status = parse_status(latest_homework)
 
                 if send_message(bot, current_status):
-                    timestamp = response.get('current_date', int(time.time()))
+                    if 'current_date' in response:
+                        timestamp = response['current_date']
+                    else:
+                        timestamp = int(time.time())
                     logger.info('Сообщение успешно отправлено')
-                else:
-                    logger.error('Не удалось отправить сообщение')
             else:
                 logger.debug('Нет новых домашних работ для проверки')
         except Exception as error:
